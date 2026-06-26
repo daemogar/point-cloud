@@ -10,6 +10,7 @@ import edu.southern.pointcloud.data.models.ScanMode
 import edu.southern.pointcloud.export.ExportFormat
 import edu.southern.pointcloud.export.ExportManager
 import edu.southern.pointcloud.export.ExportResult
+import edu.southern.pointcloud.export.MeshResolution
 import edu.southern.pointcloud.location.LocationTracker
 import edu.southern.pointcloud.scanning.ARCoreScanner
 import edu.southern.pointcloud.scanning.PointCloudAccumulator
@@ -101,15 +102,16 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         if (pts.isNotEmpty()) accumulator.addPoints(pts)
     }
 
-    fun exportPointCloud(format: ExportFormat) {
+    fun exportPointCloud(format: ExportFormat, meshResolution: MeshResolution = MeshResolution.MEDIUM) {
         viewModelScope.launch(Dispatchers.IO) {
             val points = accumulator.snapshot()
             if (points.isEmpty()) return@launch
             val result = exportManager.export(
-                points   = points,
-                format   = format,
-                gpsOrigin = _uiState.value.gpsOrigin,
-                onProgress = { p -> _uiState.update { it.copy(exportProgress = p) } }
+                points          = points,
+                format          = format,
+                gpsOrigin       = _uiState.value.gpsOrigin,
+                meshResolution  = meshResolution,
+                onProgress      = { p -> _uiState.update { it.copy(exportProgress = p) } }
             )
             _uiState.update { it.copy(exportResult = result, exportProgress = 100) }
         }

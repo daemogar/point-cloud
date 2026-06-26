@@ -22,8 +22,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import edu.southern.pointcloud.R
 import edu.southern.pointcloud.export.ExportFormat
+import edu.southern.pointcloud.export.MeshResolution
 import edu.southern.pointcloud.ui.theme.PointCloudScannerTheme
 import kotlinx.coroutines.launch
 import javax.microedition.khronos.egl.EGLConfig
@@ -263,9 +266,9 @@ fun ScanOverlay(viewModel: ScanViewModel) {
     if (showExportDialog) {
         ExportFormatDialog(
             pointCount = state.pointCount,
-            onFormat = { fmt ->
+            onFormat = { fmt, res ->
                 showExportDialog = false
-                viewModel.exportPointCloud(fmt)
+                viewModel.exportPointCloud(fmt, res)
             },
             onDismiss = { showExportDialog = false }
         )
@@ -275,39 +278,105 @@ fun ScanOverlay(viewModel: ScanViewModel) {
 @Composable
 fun ExportFormatDialog(
     pointCount: Long,
-    onFormat: (ExportFormat) -> Unit,
+    onFormat: (ExportFormat, MeshResolution) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var selectedResolution by remember { mutableStateOf(MeshResolution.MEDIUM) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Export ${"%,d".format(pointCount)} points") },
         text = {
-            Column {
-                Text("Choose output format:", style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(8.dp))
-                Text("• LAS 1.4 — Revit, AutoCAD Civil 3D (recommended)",
-                    style = MaterialTheme.typography.bodySmall)
-                Text("• PLY — SketchUp, MeshLab, CloudCompare",
-                    style = MaterialTheme.typography.bodySmall)
-                Text("• XYZ — universal ASCII, SketchUp extension",
-                    style = MaterialTheme.typography.bodySmall)
-            }
-        },
-        confirmButton = {
-            Column {
-                Button(onClick = { onFormat(ExportFormat.LAS) }, Modifier.fillMaxWidth()) {
-                    Text("LAS 1.4  (Revit / AutoCAD)")
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+
+                // ── SketchUp Make 2017 section ──────────────────────────────
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            "SketchUp Make 2017",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(Modifier.height(6.dp))
+
+                        // OBJ terrain mesh (recommended, no plugin)
+                        Button(
+                            onClick = { onFormat(ExportFormat.OBJ_TERRAIN, selectedResolution) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Terrain Mesh  (.obj)")
+                                Text(
+                                    "File › Import — no plugin needed",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+
+                        // Resolution picker for terrain mesh
+                        Spacer(Modifier.height(4.dp))
+                        Text("Grid resolution:", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        MeshResolution.entries.forEach { res ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RadioButton(
+                                    selected = selectedResolution == res,
+                                    onClick  = { selectedResolution = res }
+                                )
+                                Text(res.label, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(8.dp))
+
+                        // Downsampled XYZ for TIG plugin
+                        OutlinedButton(
+                            onClick = { onFormat(ExportFormat.XYZ_SKETCHUP, selectedResolution) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Point Cloud  (.xyz, ≤50 K pts)")
+                                Text(
+                                    "Requires TIG PointCloudMaker plugin (free)",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // ── Other software section ──────────────────────────────────
+                Text("Other software", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(onClick = { onFormat(ExportFormat.LAS, selectedResolution) },
+                    Modifier.fillMaxWidth()) {
+                    Text("LAS 1.4  — Revit / AutoCAD Civil 3D")
                 }
                 Spacer(Modifier.height(4.dp))
-                OutlinedButton(onClick = { onFormat(ExportFormat.PLY) }, Modifier.fillMaxWidth()) {
-                    Text("PLY  (SketchUp / MeshLab)")
+                OutlinedButton(onClick = { onFormat(ExportFormat.PLY, selectedResolution) },
+                    Modifier.fillMaxWidth()) {
+                    Text("PLY  — MeshLab / CloudCompare")
                 }
                 Spacer(Modifier.height(4.dp))
-                OutlinedButton(onClick = { onFormat(ExportFormat.XYZ) }, Modifier.fillMaxWidth()) {
-                    Text("XYZ  (ASCII universal)")
+                OutlinedButton(onClick = { onFormat(ExportFormat.XYZ, selectedResolution) },
+                    Modifier.fillMaxWidth()) {
+                    Text("XYZ  — ASCII universal")
                 }
             }
         },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
