@@ -25,8 +25,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import edu.southern.pointcloud.R
+import androidx.compose.foundation.layout.PaddingValues
+import edu.southern.pointcloud.export.CloudExportManager.CloudTarget
 import edu.southern.pointcloud.export.ExportFormat
 import edu.southern.pointcloud.export.MeshResolution
+import edu.southern.pointcloud.scanning.CameraPreviewRenderer
 import edu.southern.pointcloud.ui.theme.PointCloudScannerTheme
 import kotlinx.coroutines.launch
 import javax.microedition.khronos.egl.EGLConfig
@@ -36,6 +39,8 @@ class ScanActivity : AppCompatActivity() {
 
     private val viewModel: ScanViewModel by viewModels()
     private lateinit var glSurfaceView: GLSurfaceView
+    private val cameraRenderer = CameraPreviewRenderer()
+    @Volatile private var cameraTextureRegistered = false
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -87,16 +92,25 @@ class ScanActivity : AppCompatActivity() {
         glSurfaceView.setEGLContextClientVersion(2)
         glSurfaceView.setRenderer(object : GLSurfaceView.Renderer {
             override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-                gl.glClearColor(0.1f, 0.1f, 0.1f, 1f)
+                // Init the OES camera texture; register it with ARCore session if ready
+                val texId = cameraRenderer.onSurfaceCreated()
+                viewModel.scanner.session?.setCameraTextureName(texId)
+                cameraTextureRegistered = (viewModel.scanner.session != null)
             }
             override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
                 gl.glViewport(0, 0, width, height)
-                viewModel.scanner.setDisplaySurface(
-                    glSurfaceView.holder.surface, width, height
-                )
+                viewModel.scanner.session?.setDisplayGeometry(0, width, height)
             }
             override fun onDrawFrame(gl: GL10) {
+                // Session may be created after GL surface — register the texture on first chance
+                if (!cameraTextureRegistered && cameraRenderer.textureId != -1) {
+                    viewModel.scanner.session?.let { sess ->
+                        sess.setCameraTextureName(cameraRenderer.textureId)
+                        cameraTextureRegistered = true
+                    }
+                }
                 gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
+                cameraRenderer.draw()
                 viewModel.onFrame()
             }
         })
@@ -243,19 +257,42 @@ fun ScanOverlay(viewModel: ScanViewModel) {
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Row(
-                    Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E8B57))
-                    Spacer(Modifier.width(8.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(result.file.name, style = MaterialTheme.typography.bodyMedium)
-                        Text("${"%,d".format(result.pointCount)} points exported",
-                            style = MaterialTheme.typography.bodySmall)
+                Column(Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E8B57))
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(result.file.name, style = MaterialTheme.typography.bodyMedium)
+                            Text("${"%,d".format(result.pointCount)} pts  •  ready to share",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                     }
-                    IconButton(onClick = { viewModel.shareExport() }) {
-                        Icon(Icons.Default.Share, "Share")
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Google Drive
+                        FilledTonalButton(
+                            onClick = { viewModel.uploadToCloud(result, CloudTarget.GOOGLE_DRIVE) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.CloudUpload, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Drive", style = MaterialTheme.typography.labelSmall)
+                        }
+                        // OneDrive
+                        FilledTonalButton(
+                            onClick = { viewModel.uploadToCloud(result, CloudTarget.ONEDRIVE) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.CloudUpload, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("OneDrive", style = MaterialTheme.typography.labelSmall)
+                        }
+                        // Generic share
+                        IconButton(onClick = { viewModel.shareExport() }) {
+                            Icon(Icons.Default.Share, "Share")
+                        }
                     }
                 }
             }

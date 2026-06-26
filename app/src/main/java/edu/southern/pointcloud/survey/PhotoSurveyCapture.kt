@@ -1,7 +1,6 @@
 package edu.southern.pointcloud.survey
 
 import android.content.Context
-import android.location.Exif
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat

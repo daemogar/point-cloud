@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import edu.southern.pointcloud.data.models.GeoPoint
 import edu.southern.pointcloud.data.models.Point3D
 import edu.southern.pointcloud.data.models.ScanMode
+import edu.southern.pointcloud.export.CloudExportManager
+import edu.southern.pointcloud.export.CloudExportManager.CloudTarget
 import edu.southern.pointcloud.export.ExportFormat
 import edu.southern.pointcloud.export.ExportManager
 import edu.southern.pointcloud.export.ExportResult
@@ -119,6 +121,10 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
 
     fun shareExport() {
         _uiState.value.exportResult?.let { exportManager.shareFile(it) }
+    }
+
+    fun uploadToCloud(result: ExportResult, target: CloudTarget) {
+        CloudExportManager.share(getApplication(), result.file, target)
     }
 
     fun clearScan() {

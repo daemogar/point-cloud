@@ -81,4 +81,7 @@ dependencies {
 
     // Persistent settings
     implementation(libs.datastore.preferences)
+
+    // EXIF tagging for geotagged photos (photo survey mode)
+    implementation(libs.exifinterface)
 }
