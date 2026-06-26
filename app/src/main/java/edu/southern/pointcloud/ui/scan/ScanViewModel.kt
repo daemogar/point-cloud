@@ -1,12 +1,12 @@
 package edu.southern.pointcloud.ui.scan
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import edu.southern.pointcloud.data.models.GeoPoint
 import edu.southern.pointcloud.data.models.Point3D
-import edu.southern.pointcloud.data.models.ScanMode
 import edu.southern.pointcloud.export.CloudExportManager
 import edu.southern.pointcloud.export.CloudExportManager.CloudTarget
 import edu.southern.pointcloud.export.ExportFormat
@@ -36,7 +36,8 @@ data class ScanUiState(
             GeoPoint.distanceMeters(gpsOrigin, currentGps) else 0.0
 }
 
-class ScanViewModel(app: Application) : AndroidViewModel(app) {
+@HiltViewModel
+class ScanViewModel @Inject constructor(app: Application) : AndroidViewModel(app) {
 
     private val _uiState = MutableStateFlow(ScanUiState())
     val uiState: StateFlow<ScanUiState> = _uiState.asStateFlow()

@@ -111,11 +111,12 @@ object LasExporter {
 
         val today = LocalDate.now()
 
-        h.put("LASF".toByteArray())              // File signature
-        h.putShort(0)                             // File source ID
-        h.putShort(0x0011)                        // Global encoding: GPS time + WKT CRS
-        h.putInt(0); h.putInt(0); h.putShort(0); h.putShort(0) // Project ID (unused)
-        h.put(1); h.put(4)                        // Version 1.4
+        h.put("LASF".toByteArray())              // File signature (4)
+        h.putShort(0)                             // File source ID (2)
+        h.putShort(0x0011)                        // Global encoding (2)
+        // Project ID — GUID: uint32 + uint16 + uint16 + uint8[8] = 16 bytes
+        h.putInt(0); h.putShort(0); h.putShort(0); h.put(ByteArray(8))
+        h.put(1); h.put(4)                        // Version 1.4 (2)
         putStringPadded("PointCloudScanner", 32)  // System identifier
         putStringPadded("Samsung S26 Ultra App", 32) // Generating software
         h.putShort(today.dayOfYear.toShort())     // File creation DOY
@@ -135,9 +136,12 @@ object LasExporter {
         h.putDouble(maxY); h.putDouble(minY)
         h.putDouble(maxZ); h.putDouble(minZ)
 
-        // LAS 1.4 extended fields
-        h.putLong(n)   // Point count (64-bit)
-        repeat(15) { h.putLong(if (it == 0) n else 0L) } // Returns 1-15
+        // LAS 1.4 extended fields (bytes 227–374)
+        h.putLong(0)   // Start of first Extended VLR (8)
+        h.putLong(0)   // Number of Extended VLRs (8)
+        h.putLong(n)   // Number of point records 64-bit (8)
+        repeat(15) { h.putLong(if (it == 0) n else 0L) } // Returns 1-15 (120)
+        h.putInt(0)    // Reserved / user data (4)  → total = 375
 
         return h
     }

@@ -98,7 +98,8 @@ object DepthFrameProcessor {
         depthW: Int,
         depthH: Int
     ): Triple<Byte, Byte, Byte> {
-        if (image == null) return Triple(127.toByte(), 127.toByte(), 127.toByte())
+        val gray = Triple(127.toByte(), 127.toByte(), 127.toByte())
+        if (image == null || image.planes.size < 3) return gray
 
         // ARCore color image is typically YUV_420_888; scale coords to color image size
         val cW = image.width

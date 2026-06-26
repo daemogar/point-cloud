@@ -29,12 +29,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import edu.southern.pointcloud.export.CloudExportManager.CloudTarget
 import edu.southern.pointcloud.export.ExportFormat
 import edu.southern.pointcloud.export.MeshResolution
+import dagger.hilt.android.AndroidEntryPoint
 import edu.southern.pointcloud.scanning.CameraPreviewRenderer
 import edu.southern.pointcloud.ui.theme.PointCloudScannerTheme
 import kotlinx.coroutines.launch
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
+@AndroidEntryPoint
 class ScanActivity : AppCompatActivity() {
 
     private val viewModel: ScanViewModel by viewModels()
@@ -124,8 +126,10 @@ class ScanActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        glSurfaceView.onPause()
         viewModel.stopScanning()
+        glSurfaceView.queueEvent { cameraRenderer.release() }
+        glSurfaceView.onPause()
+        cameraTextureRegistered = false
     }
 }
 

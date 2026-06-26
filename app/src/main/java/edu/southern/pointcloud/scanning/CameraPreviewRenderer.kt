@@ -3,6 +3,7 @@ package edu.southern.pointcloud.scanning
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -53,6 +54,9 @@ class CameraPreviewRenderer {
 
     /** Must be called on the GL thread. Returns the OES texture ID. */
     fun onSurfaceCreated(): Int {
+        // Guard against double-init (e.g. surface recreated after pause)
+        if (textureId != -1) return textureId
+
         // OES texture for ARCore camera feed
         val ids = IntArray(1)
         GLES20.glGenTextures(1, ids, 0)
@@ -121,5 +125,19 @@ class CameraPreviewRenderer {
         GLES20.glCreateShader(type).also {
             GLES20.glShaderSource(it, src)
             GLES20.glCompileShader(it)
+            val status = IntArray(1)
+            GLES20.glGetShaderiv(it, GLES20.GL_COMPILE_STATUS, status, 0)
+            if (status[0] == 0) {
+                Log.e("CameraRenderer", "Shader compile error: ${GLES20.glGetShaderInfoLog(it)}")
+            }
         }
+
+    /** Call from ScanActivity.onPause() to free GPU resources. */
+    fun release() {
+        surfaceTexture?.release()
+        surfaceTexture = null
+        if (textureId != -1) { GLES20.glDeleteTextures(1, intArrayOf(textureId), 0); textureId = -1 }
+        if (quadVbo  != -1) { GLES20.glDeleteBuffers(1, intArrayOf(quadVbo), 0);    quadVbo  = -1 }
+        if (program  != -1) { GLES20.glDeleteProgram(program);                       program  = -1 }
+    }
 }

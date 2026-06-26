@@ -3,6 +3,7 @@ package edu.southern.pointcloud
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import edu.southern.pointcloud.ui.scan.ScanActivity
 import edu.southern.pointcloud.ui.theme.PointCloudScannerTheme
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
