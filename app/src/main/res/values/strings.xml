@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Point Cloud Scanner</string>
+    <string name="scan_start">Start Scan</string>
+    <string name="scan_stop">Stop Scan</string>
+    <string name="export">Export</string>
+    <string name="share">Share</string>
+    <string name="permission_camera_rationale">Camera access is required to capture depth data.</string>
+    <string name="permission_location_rationale">Location is required to geotag the point cloud for use in SketchUp / Revit.</string>
+</resources>
